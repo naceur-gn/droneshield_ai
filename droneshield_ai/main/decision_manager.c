@@ -62,7 +62,19 @@ dshl_outcome_t dshl_decide_mqtt(const char *topic, uint16_t topic_len,
     bool unknown_cmd = false;
     uint16_t pay_len = payload_len;
 
-    /* Rate limit before heavy work (still after oversize gate in queue). */
+    /* quad pass-through: no signature, forward raw payload to UART. */
+    if (topic && topic_len >= 4 && strncmp(topic, "quad/", 5) == 0) {
+        dshl_log_event(DSHL_EVT_MQTT_MSG_RECEIVED, DSHL_REASON_NONE, "quad_raw");
+        if (dshl_uart_forward_raw(topic, payload, payload_len) == ESP_OK) {
+            dshl_log_event(DSHL_EVT_UART_FORWARDED, DSHL_REASON_OK, "quad_raw");
+        } else {
+            dshl_log_event(DSHL_EVT_UART_FORWARDED, DSHL_REASON_UART_MALFORMED, "tx_fail");
+        }
+        out.decision = DSHL_DECISION_ACCEPT;
+        out.reason = DSHL_REASON_OK;
+        out.forward = true;
+        return out;
+    }
     if (!dshl_rate_limit_allow()) {
         out.decision = DSHL_DECISION_RATE_LIMIT;
         out.reason = DSHL_REASON_RATE_LIMIT;

@@ -4,6 +4,7 @@
 
 #include "driver/uart.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "mbedtls/md.h"
@@ -253,6 +254,59 @@ esp_err_t dshl_uart_forward_command(const dshl_parsed_cmd_t *cmd)
     memcpy(frame + DSHL_UART_HEADER_LEN + n, tag, DSHL_UART_TAG_LEN);
 
     int total = DSHL_UART_HEADER_LEN + n + DSHL_UART_TAG_LEN;
+    int written = uart_write_bytes(DSHL_UART_NUM, frame, total);
+    if (written != total) {
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+}
+esp_err_t dshl_uart_forward_raw(const char *topic, const uint8_t *payload, uint16_t len)
+{
+    if (!s_ready || !topic || !payload || len == 0) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    /* Build a minimal authenticated-ish frame carrying topic + raw payload.
+     * No HMAC validation on the input; tagged with UART key for the link. */
+    char body[DSHL_UART_MAX_PAYLOAD];
+    int n = snprintf(body, sizeof(body), "{\"topic\":\"%s\",\"payload\":", topic);
+    if (n < 0 || n >= (int)sizeof(body)) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+    /* append payload as string if printable else hex */
+    int rem = (int)sizeof(body) - n - 1;
+    if (len < (uint16_t)rem) {
+        memcpy(body + n, payload, len);
+        n += len;
+        body[n] = '\0';
+    } else {
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    uint8_t frame[DSHL_UART_HEADER_LEN + DSHL_UART_MAX_PAYLOAD + DSHL_UART_TAG_LEN];
+    frame[0] = DSHL_UART_MAGIC0;
+    frame[1] = DSHL_UART_MAGIC1;
+    frame[2] = DSHL_UART_VERSION;
+    frame[3] = DSHL_UART_TYPE_COMMAND;
+    uint32_t seq = (uint32_t)esp_timer_get_time();
+    frame[4] = (uint8_t)(seq >> 24);
+    frame[5] = (uint8_t)(seq >> 16);
+    frame[6] = (uint8_t)(seq >> 8);
+    frame[7] = (uint8_t)(seq);
+    size_t plen = strlen(body);
+    if (plen > DSHL_UART_MAX_PAYLOAD) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+    frame[8] = (uint8_t)((plen >> 8) & 0xFF);
+    frame[9] = (uint8_t)(plen & 0xFF);
+    memcpy(frame + DSHL_UART_HEADER_LEN, body, plen);
+
+    uint8_t tag[DSHL_UART_TAG_LEN];
+    if (!uart_compute_tag(frame, DSHL_UART_HEADER_LEN + plen, tag)) {
+        return ESP_FAIL;
+    }
+    memcpy(frame + DSHL_UART_HEADER_LEN + plen, tag, DSHL_UART_TAG_LEN);
+
+    int total = DSHL_UART_HEADER_LEN + (int)plen + DSHL_UART_TAG_LEN;
     int written = uart_write_bytes(DSHL_UART_NUM, frame, total);
     if (written != total) {
         return ESP_FAIL;

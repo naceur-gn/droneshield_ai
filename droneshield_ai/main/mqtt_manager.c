@@ -46,6 +46,10 @@ static void mqtt_event_handler(void *arg, esp_event_base_t base,
         if (msg_id >= 0) {
             dshl_log_event(DSHL_EVT_MQTT_SUBSCRIBE_OK, DSHL_REASON_NONE, DSHL_TOPIC_COMMANDS);
         }
+        int msg_id2 = esp_mqtt_client_subscribe(s_client, DSHL_TOPIC_QUAD, 1);
+        if (msg_id2 >= 0) {
+            dshl_log_event(DSHL_EVT_MQTT_SUBSCRIBE_OK, DSHL_REASON_NONE, DSHL_TOPIC_QUAD);
+        }
         break;
 
     case MQTT_EVENT_DISCONNECTED:
