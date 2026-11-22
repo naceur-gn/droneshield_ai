@@ -20,7 +20,6 @@
 
 /* MQTT topics (subscribe only to our own command topic) */
 #define DSHL_TOPIC_COMMANDS     "droneshield/" DSHL_DEVICE_ID "/commands"
-#define DSHL_TOPIC_QUAD         "quad/+"
 #define DSHL_TOPIC_STATUS       "droneshield/" DSHL_DEVICE_ID "/status"
 #define DSHL_TOPIC_EVENTS       "droneshield/" DSHL_DEVICE_ID "/events"
 
