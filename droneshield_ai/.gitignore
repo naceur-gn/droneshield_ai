@@ -1,0 +1,28 @@
+# Build artifacts
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+dependencies.lock
+
+# Secrets - never commit real credentials or keys
+main/secrets.h
+secrets.h
+*.pem
+*.key
+*.crt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Local captures (keep committed sample dataset intentional)
+tools/*.log
+*.log

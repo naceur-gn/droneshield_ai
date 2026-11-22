@@ -1,0 +1,30 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "security_logger.c"
+        "wifi_manager.c"
+        "mqtt_manager.c"
+        "message_validator.c"
+        "crypto_security.c"
+        "anti_replay.c"
+        "rule_engine.c"
+        "feature_extractor.c"
+        "ai_model.c"
+        "decision_manager.c"
+        "uart_gateway.c"
+        "exported_model.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        json
+        nvs_flash
+        esp_wifi
+        esp_netif
+        esp_event
+        esp_timer
+        mqtt
+        mbedtls
+        driver
+        lwip
+        esp_hw_support
+)
